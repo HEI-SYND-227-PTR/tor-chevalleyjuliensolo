@@ -40,10 +40,16 @@ osMessageQueueId_t queue_timeS_id;
 osMessageQueueId_t queue_lcd_id;
 osMessageQueueId_t queue_keyboard_id;
 osMessageQueueId_t queue_usartR_id;
+osMessageQueueId_t queue_macSToken_id;
 
 const osMessageQueueAttr_t queue_macR_attr = {
 	.name = "MAC_RECEIVER"
 };
+
+const osMessageQueueAttr_t queue_macSToken_attr = {
+	.name = "MAC_WAIT_TOKEN"
+};
+
 const osMessageQueueAttr_t queue_macS_attr = {
 	.name = "MAC_SENDER"
 };
@@ -387,6 +393,7 @@ int main(void)
 	queue_lcd_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_lcd_attr);
 	queue_keyboard_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_keyboard_attr);
 	queue_usartR_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_usartR_attr);
+	queue_macSToken_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_macSToken_attr);
 
 	//------------------------------------------------------------------------------
 	// Create Threads
