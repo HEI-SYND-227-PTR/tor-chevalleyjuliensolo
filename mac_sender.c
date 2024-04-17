@@ -4,14 +4,13 @@
 #include "main.h"
 
 
-void MacSender(void *argument)
-{
+void MacSender(void *argument){
 	// TODO 
 	//on New_Token Event -> Prepare a token frame 
 	
 	osStatus_t nextMacSElem, nextMsg;
-	struct queueMsg_t queueMsg, queuePhyFrame, queueFrame, queueLCD;	
-
+	
+	struct queueMsg_t fromQueueAppObj, toQueuePhyFrame, fromQueueMacS, toQueueLCD;
 	uint8_t srcAddrPos=0;
 	uint8_t destAddrPos=1;
 	uint8_t dataLenPos=2;
@@ -26,19 +25,21 @@ void MacSender(void *argument)
 	uint8_t* phyPtr;
 	
 	for (;;){
-	nextMacSElem = osMessageQueueGet( 	
+		nextMacSElem = osMessageQueueGet( 	
 			queue_macS_id,
-			&queueFrame,
+			&fromQueueAppObj,
 			NULL,
 			osWaitForever);
+		
+		uint8_t *myFirstFrameBytePtr = fromQueueAppObj.anyPtr;
 		//gTokenInterface.myAddress = MYADDRESS;
 
 		
-		switch ((queueFrame.type))
-		{
+		switch (fromQueueAppObj.type){
 			case NEW_TOKEN:
 				phyPtr=osMemoryPoolAlloc(memPool, osWaitForever);
-				
+				toQueuePhyFrame.anyPtr=phyPtr;	
+			
 				for(uint8_t i=0; i<(TOKENSIZE-2); i++){
 						if(i==0){
 						(*phyPtr)=TOKEN_TAG;
@@ -48,28 +49,29 @@ void MacSender(void *argument)
 						}
 						phyPtr++;
 					}
-				queuePhyFrame.type = TO_PHY;
-				queuePhyFrame.anyPtr=phyPtr;		
-				osMessageQueuePut(queue_phyS_id, &queuePhyFrame, osPriorityNormal, osWaitForever);
+				toQueuePhyFrame.type = TO_PHY;
+					
+				osMessageQueuePut(queue_phyS_id, &toQueuePhyFrame, osPriorityNormal, osWaitForever);
 
 				break;
 			case START:
-				//CHAT_SAPI
+				//TODO
 				break;
 			case STOP:
+				//TODO
 				break;
 			case DATA_IND :
 				phyPtr=osMemoryPoolAlloc(memPool, osWaitForever);
 										
-				char * charPtr = queueFrame.anyPtr;
-				dataSize = strlen(charPtr);
+				//char* charPtr = fromQueueAppObj.anyPtr;
+				dataSize = strlen(myFirstFrameBytePtr);
 				totalSize = dataSize + 4;
 				statusPos = userDataPos+dataSize;
 					
-				phyPtr[srcAddrPos] = (gTokenInterface.myAddress << 3) | queueFrame.sapi;	
-				phyPtr[destAddrPos] = (queueFrame.addr << 3) | queueFrame.sapi;	
+				phyPtr[srcAddrPos] = (gTokenInterface.myAddress << 3) | fromQueueAppObj.sapi;	
+				phyPtr[destAddrPos] = (fromQueueAppObj.addr << 3) | fromQueueAppObj.sapi;	
 				phyPtr[dataLenPos] = dataSize;
-				memcpy(&phyPtr[userDataPos],charPtr,dataSize);
+				memcpy(&phyPtr[userDataPos],myFirstFrameBytePtr,dataSize);
 
 				// Calculate CheckSum 					
 					uint8_t tempCheckSum=0;
@@ -80,46 +82,58 @@ void MacSender(void *argument)
 					//Write CheckSum in the frame
 					phyPtr[statusPos]=(tempCheckSum<<2);	
 
-					queuePhyFrame.type = TO_PHY;
-					queuePhyFrame.anyPtr = phyPtr;
+					toQueuePhyFrame.type = TO_PHY;
+					toQueuePhyFrame.anyPtr = phyPtr;
 					
 					// make a copy before send !!!!!!!!!
 					//uint8_t* copyPtr = osmemoryPoolAlloc(memPool, osWaitForever);
 					//memcpy(copyPtr,phyPtr,totalSize);
 					
-					// free string sent by Chat/Time (queueFrame.anyPtr)
-					osMemoryPoolFree(memPool, &queueFrame.anyPtr);
-					
-					osMessageQueuePut(queue_macSToken_id, &queuePhyFrame,osPriorityNormal, osWaitForever);
+					// free string sent by Chat/Time (fromQueueAppObj.anyPtr)
+					osMemoryPoolFree(memPool, &fromQueueAppObj.anyPtr);
+					osMessageQueuePut(queue_macSToken_id, &toQueuePhyFrame,osPriorityNormal, osWaitForever);
 
 				break;
 			case TOKEN:
 		
-				nextMsg = osMessageQueueGet(queue_macSToken_id,&queueMsg,NULL,0);
+				nextMsg = osMessageQueueGet(queue_macSToken_id,&fromQueueMacS,NULL,0);
 			
-				//queueFrame is of type Token, and has anyPtr pointing to the frame 0xFF....
+				//fromQueueAppObj is of type Token, and has anyPtr pointing to the frame 0xFF....
 				if(nextMsg==osOK){
 								// make a copy before send !!!!!!!!!
 					copyFrameSentPtr = osMemoryPoolAlloc(memPool, osWaitForever);
-					memcpy(copyFrameSentPtr,queueMsg.anyPtr,totalSize);
-					
-					queueLCD.type=TOKEN_LIST;
-					
-					osMessageQueuePut(queue_lcd_id, &queueLCD, osPriorityNormal, osWaitForever);
-					osMessageQueuePut(queue_phyS_id, &queueMsg,osPriorityNormal, osWaitForever);
+					memcpy(copyFrameSentPtr,fromQueueMacS.anyPtr,totalSize);
+					osMessageQueuePut(queue_phyS_id, &fromQueueMacS,osPriorityNormal, osWaitForever);
 				}
 				else{
-
+						
 					//TODO Modify Sapis of my Station wrt gTokenInterface values
-					//queueFrame.anyPtr[1+gTokenInterface.myAddress]
-					osMessageQueuePut(queue_phyS_id, &queueFrame,osPriorityNormal, osWaitForever);
+					//fromQueueAppObj.anyPtr[1+gTokenInterface.myAddress]
+					osMessageQueuePut(queue_phyS_id, &fromQueueAppObj,osPriorityNormal, osWaitForever);
 				}
+				
+					toQueueLCD.type=TOKEN_LIST;
+					uint8_t i=0;
+					//uint8_t *myStationPtr = fromQueueAppObj.anyPtr;
+				if(gTokenInterface.connected == 1)
+				{
+					myFirstFrameBytePtr[gTokenInterface.myAddress+1] = (1<<TIME_SAPI) | (1<<CHAT_SAPI);
+				}
+				else
+				{
+					myFirstFrameBytePtr[gTokenInterface.myAddress+1] = (1<<TIME_SAPI);
+				}
+					for(i=0;i<15;i++){
+					gTokenInterface.station_list[i]=(*(myFirstFrameBytePtr+i+1));
+					}
+					osMessageQueuePut(queue_lcd_id, &toQueueLCD, osPriorityNormal, osWaitForever);
 				//TODO SEND BACK TOKEN ON THE RING
 				//TODO ELSE SEND TOKEN_LIST / MAC_ERROR ? 
 				break;
 			case DATABACK:
 				//free copyFrameSentPtr et queuePhyMsg.anyPtr
-			osMemoryPoolFree(memPool, &copyFrameSentPtr); //if everything is corectly recieved
+			
+				//osMemoryPoolFree(memPool, &copyFrameSentPtr); //if everything is corectly recieved
 			default:
 				break;
 		}
