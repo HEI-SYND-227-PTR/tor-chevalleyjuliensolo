@@ -40,13 +40,13 @@ osMessageQueueId_t queue_timeS_id;
 osMessageQueueId_t queue_lcd_id;
 osMessageQueueId_t queue_keyboard_id;
 osMessageQueueId_t queue_usartR_id;
-osMessageQueueId_t queue_macSToken_id;
+osMessageQueueId_t queue_macWaitToken_id;
 
 const osMessageQueueAttr_t queue_macR_attr = {
 	.name = "MAC_RECEIVER"
 };
 
-const osMessageQueueAttr_t queue_macSToken_attr = {
+const osMessageQueueAttr_t queue_macWaitToken_attr = {
 	.name = "MAC_WAIT_TOKEN"
 };
 
@@ -346,7 +346,7 @@ uint32_t HAL_GetTick(void)
 //////////////////////////////////////////////////////////////////////////////////
 /// \brief Init all and start RTX5
 //////////////////////////////////////////////////////////////////////////////////
-int main(void)
+int main(void) 
 {
 	SystemClock_Config();
 
@@ -393,12 +393,12 @@ int main(void)
 	queue_lcd_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_lcd_attr);
 	queue_keyboard_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_keyboard_attr);
 	queue_usartR_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_usartR_attr);
-	queue_macSToken_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_macSToken_attr);
+	queue_macWaitToken_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_macWaitToken_attr);
 
 	//------------------------------------------------------------------------------
 	// Create Threads
 	//------------------------------------------------------------------------------
-  // audio_id = osThreadNew(AudioPlayer, NULL, &audio_attr);
+  audio_id = osThreadNew(AudioPlayer, NULL, &audio_attr);
   debug_id = osThreadNew(DebugStation, NULL, &debug_attr);
   phy_rec_id = osThreadNew(PhReceiver, NULL, &phy_rec_attr);
   phy_snd_id = osThreadNew(PhSender, NULL, &phy_snd_attr);

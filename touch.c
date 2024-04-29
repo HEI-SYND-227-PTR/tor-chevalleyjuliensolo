@@ -112,7 +112,7 @@ void Touch(void *argument)
 					//----------------------------------------------------------------------
 					retCode = osEventFlagsClear(eventFlag_id, BROADCAST_TIME_EVT);	// clr flag
 					CheckRetCode(retCode,__LINE__,__FILE__,CONTINUE);									
-				}
+				} 
 			}
 			// checkbox receive CRC error ----------------------------------------------
 			if(tmpHndl == cbRecCRCError)

@@ -34,7 +34,7 @@ void AudioPlayer(void *argument)
   Audio_SetDataFormat(AUDIO_STREAM_OUT, AUDIO_DATA_16_MONO);
   Audio_SetFrequency (AUDIO_STREAM_OUT,16000);
   Audio_SetMute      (AUDIO_STREAM_OUT, AUDIO_CHANNEL_MASTER, false);
-  Audio_SetVolume    (AUDIO_STREAM_OUT, AUDIO_CHANNEL_MASTER, 50);
+  Audio_SetVolume    (AUDIO_STREAM_OUT, AUDIO_CHANNEL_MASTER, 100);
   Audio_Start        (AUDIO_STREAM_OUT);
 	//------------------------------------------------------------------------------
 	// Bacause of audio initialize use the I2C interrupts and the uGFX touch

@@ -16,9 +16,9 @@
 //--------------------------------------------------------------------------------
 // Constants to change the system behavior
 //--------------------------------------------------------------------------------
-#define DEBUG_MODE				1					// mode is physical line (0) or debug (1)
-#define MYADDRESS   			3					// your address choice (table number) - That is station 4
-#define MAX_BLOCK_SIZE 		100				// size max for a frame (#bytes)
+#define DEBUG_MODE				0					// mode is physical line (0) or debug (1)
+#define MYADDRESS   			5					// your address choice (table number) - That is station 4
+#define MAX_BLOCK_SIZE 		255				// size max for a frame (#bytes)
 
 //--------------------------------------------------------------------------------
 // Constants to NOT change for the system working
@@ -51,7 +51,7 @@ extern osMessageQueueId_t  queue_keyboard_id;
 extern osMessageQueueId_t  queue_usartR_id;
 extern osEventFlagsId_t  	eventFlag_id;
 
-extern osMessageQueueId_t queue_macSToken_id;
+extern osMessageQueueId_t queue_macWaitToken_id;
 //--------------------------------------------------------------------------------
 // functions used in more than one file
 //--------------------------------------------------------------------------------
