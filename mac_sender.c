@@ -46,9 +46,10 @@ void MacSender(void *argument){
 			osWaitForever);
 		
 		if(nextMacSElem == osOK){
-	//		nxtMsgCharPtr = fromAppQueue.anyPtr;
+	
 			switch (fromAppQueue.type){
-			//DONE
+				
+			// We recieve the instruction to generate a NEW TOKEN
 			case NEW_TOKEN:
 				tokenPtr=osMemoryPoolAlloc(memPool, osWaitForever);
 					
@@ -65,15 +66,16 @@ void MacSender(void *argument){
 				fromAppQueue.anyPtr=tokenPtr;
 				osMessageQueuePut(queue_phyS_id, &fromAppQueue, osPriorityNormal, osWaitForever);
 				break;
-				//DONE
+				//Connect the station when a START Command is recieved
 			case START:
 				gTokenInterface.connected=1;
 				break;
-			//DONE
+			// When a STOP command is recieved -> disconnect the station
 			case STOP:
 				gTokenInterface.connected=0;
 				break;
-			//DONE
+			
+			// When the message contains a DATA_IND -> Prepare the frame and put it on a temporary queue
 			case DATA_IND :
 
 				destFrame.ptr = osMemoryPoolAlloc(memPool, osWaitForever);				
@@ -106,15 +108,17 @@ void MacSender(void *argument){
 				
 				
 				fromAppQueue.type = TO_PHY;
-				fromAppQueue.anyPtr = destFrame.ptr;  
+				fromAppQueue.anyPtr = destFrame.ptr;
 
+				//Put the frame in the temporary queue
 				nextTempMsg = osMessageQueuePut(queue_macWaitToken_id, &fromAppQueue,osPriorityNormal, 0);
 				if(nextTempMsg != osOK){
 					osMemoryPoolFree(memPool, fromAppQueue.anyPtr);
 					CheckRetCode(nextTempMsg,__LINE__,__FILE__,CONTINUE);					
 				}
 				break;
-					//DONE
+					//We Have the TOKEN at hand, so we can send the next message from the temporary queue. 
+					//The TOKEN is kept (not given back to the network) until we recieve a DATABACK with read and ack = 1
 			case TOKEN:
 				//First update the list of connected stations
 				tokenPtr = fromAppQueue.anyPtr;
@@ -222,155 +226,3 @@ void MacSender(void *argument){
 	}
 }
 
-
-/*
-#include "stm32f7xx_hal.h"
-#include <stdio.h>
-#include <string.h>
-#include "main.h"
-
-
-void MacSender(void *argument){
-	// TODO 
-	//on New_Token Event -> Prepare a token frame 
-	
-	osStatus_t nextMacSElem, nextMsg;
-	
-	struct queueMsg_t fromQueueAppObj, toQueuePhyFrame, fromQueueMacWait, toQueueLCD;
-	
-	
-	uint8_t srcAddrPos=0;
-	uint8_t destAddrPos=1;
-	uint8_t dataLenPos=2;
-	uint8_t userDataPos=3;
-	uint8_t statusPos=0;
-	uint8_t * tokenPtr;		
-	uint8_t dataSize=0;
-	uint8_t totalSize = 0; 
-
-	uint8_t* copyFrameSentPtr;
-	
-	uint8_t *toPhyPtr, *tokPtr;
-	
-	for (;;){
-		nextMacSElem = osMessageQueueGet( 	
-			queue_macS_id,
-			&fromQueueAppObj,
-			NULL,
-			osWaitForever);
-		
-		if(nextMacSElem ==osOK){
-			char *myCharMacSPtr = fromQueueAppObj.anyPtr;
-			switch (fromQueueAppObj.type){
-			//DONE
-			case NEW_TOKEN:
-				tokPtr=osMemoryPoolAlloc(memPool, osWaitForever);
-					
-				for(uint8_t i=0; i<(TOKENSIZE-2); i++){
-						if(i==0){
-						tokPtr[i]=TOKEN_TAG;
-						}
-						else{
-						tokPtr[i]=0x00;
-						}
-				}
-
-				toQueuePhyFrame.type = TO_PHY;
-				toQueuePhyFrame.anyPtr=tokPtr;
-				osMessageQueuePut(queue_phyS_id, &toQueuePhyFrame, osPriorityNormal, osWaitForever);
-				break;
-				//DONE
-			case START:
-				gTokenInterface.connected=1;
-				break;
-			//DONE
-			case STOP:
-				gTokenInterface.connected=0;
-				break;
-			//DONE
-			case DATA_IND :
-				toPhyPtr=osMemoryPoolAlloc(memPool, osWaitForever);
-										
-				//char* charPtr = fromQueueAppObj.anyPtr;
-				dataSize = strlen(myCharMacSPtr);
-				totalSize = dataSize + 4;
-				statusPos = userDataPos+dataSize;
-					
-				toPhyPtr[srcAddrPos] = (gTokenInterface.myAddress << 3) | fromQueueAppObj.sapi;	
-				toPhyPtr[destAddrPos] = (fromQueueAppObj.addr << 3) | fromQueueAppObj.sapi;	
-				toPhyPtr[dataLenPos] = dataSize;
-				memcpy(&toPhyPtr[userDataPos],myCharMacSPtr,dataSize);
-
-				// Calculate CheckSum 					
-					uint8_t tempCheckSum=0;
-					for(uint8_t i=0; i<statusPos;i++){
-						tempCheckSum+=toPhyPtr[i];
-					}
-					
-					//Write CheckSum in the frame
-					toPhyPtr[statusPos]=(tempCheckSum<<2);	
-
-					toQueuePhyFrame.type = TO_PHY;
-					toQueuePhyFrame.anyPtr = toPhyPtr;
-
-					// free string sent by Chat/Time (fromQueueAppObj.anyPtr)
-					osMemoryPoolFree(memPool, fromQueueAppObj.anyPtr);
-					osMessageQueuePut(queue_macWaitToken_id, &toQueuePhyFrame,osPriorityNormal, osWaitForever);
-				break;
-					//DONE
-			case TOKEN:
-				//First update the list of connected stations
-				toQueueLCD.type=TOKEN_LIST;
-				if(gTokenInterface.connected)
-				{
-					myCharMacSPtr[gTokenInterface.myAddress+1] = (1<<TIME_SAPI) | (1<<CHAT_SAPI);
-				}
-				else
-				{
-					myCharMacSPtr[gTokenInterface.myAddress+1] = (1<<TIME_SAPI)|(0<<CHAT_SAPI);
-				}
-				uint8_t i=0;
-				for(i=0;i<(TOKENSIZE-4);i++){
-					gTokenInterface.station_list[i]=(*(myCharMacSPtr+i+1));
-				}
-					osMessageQueuePut(queue_lcd_id, &toQueueLCD, osPriorityNormal, osWaitForever);
-			
-				nextMsg = osMessageQueueGet(queue_macWaitToken_id,&fromQueueMacWait,NULL,0);
-			
-				//fromQueueAppObj is of type Token, and has anyPtr pointing to the frame 0xFF....
-				if(nextMsg==osOK){
-					tokenPtr = fromQueueAppObj.anyPtr;
-								// make a copy before send !!!!!!!!!
-					copyFrameSentPtr = osMemoryPoolAlloc(memPool, osWaitForever);
-			//		copyFrameSentPtr=fromQueueMacWait.anyPtr;
-					totalSize = (uint8_t *)fromQueueMacWait.anyPtr[2] + 4; // pour les bricoleurs, enfin un peu moins
-					memcpy(copyFrameSentPtr,fromQueueMacWait.anyPtr,totalSize);
-					osMessageQueuePut(queue_phyS_id, &fromQueueMacWait,osPriorityNormal, osWaitForever);
-				}
-				else{
-					//TOKEN is sent back to the ring
-					osMessageQueuePut(queue_phyS_id, &fromQueueAppObj,osPriorityNormal, osWaitForever);
-				}
-				
-
-
-				break;
-			case DATABACK:
-				//free copyFrameSentPtr et queuePhyMsg.anyPtr
-				if((myCharMacSPtr[myCharMacSPtr[dataLenPos]+3] & 0x03)== 0x03){
-				toQueuePhyFrame.type=TO_PHY;
-				toQueuePhyFrame.anyPtr=tokenPtr;	
-				osMessageQueuePut(queue_phyS_id, &toQueuePhyFrame,osPriorityNormal, osWaitForever);	
-				osMemoryPoolFree(memPool, copyFrameSentPtr);
-				osMemoryPoolFree(memPool, fromQueueAppObj.anyPtr);
-				}
-			
-				
-				//osMemoryPoolFree(memPool, &copyFrameSentPtr); //if everything is corectly recieved
-			default:
-				break;
-		}
-		}
-	}
-}
-*/
