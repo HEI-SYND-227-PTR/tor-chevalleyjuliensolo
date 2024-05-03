@@ -12,7 +12,7 @@ void MacSender(void *argument){
 	// TODO 
 	//on New_Token Event -> Prepare a token frame 
 	
-	osStatus_t nextMacSElem, nextMsg;
+	osStatus_t nextMacSElem, nextMsg, nextTempMsg;
 	struct queueMsg_t fromQueueMacWait;
 	struct queueMsg_t fromAppQueue;
 	
@@ -108,7 +108,11 @@ void MacSender(void *argument){
 				fromAppQueue.type = TO_PHY;
 				fromAppQueue.anyPtr = destFrame.ptr;  
 
-				osMessageQueuePut(queue_macWaitToken_id, &fromAppQueue,osPriorityNormal, osWaitForever);
+				nextTempMsg = osMessageQueuePut(queue_macWaitToken_id, &fromAppQueue,osPriorityNormal, 0);
+				if(nextTempMsg != osOK){
+					osMemoryPoolFree(memPool, fromAppQueue.anyPtr);
+					CheckRetCode(nextTempMsg,__LINE__,__FILE__,CONTINUE);					
+				}
 				break;
 					//DONE
 			case TOKEN:
@@ -147,6 +151,7 @@ void MacSender(void *argument){
 					osMessageQueuePut(queue_phyS_id, &fromQueueMacWait,osPriorityNormal, osWaitForever);
 				}
 				else{
+					CheckRetCode(nextMsg,__LINE__,__FILE__,CONTINUE);
 					//TOKEN is sent back to the ring
 					osMessageQueuePut(queue_phyS_id, &fromAppQueue,osPriorityNormal, osWaitForever);
 					tokenPtr=NULL;
@@ -158,6 +163,7 @@ void MacSender(void *argument){
 			case DATABACK:
 				//free copyFrameSentPtr et queuePhyMsg.anyPtr
 				currentStatus = ((char*)fromAppQueue.anyPtr)[((char*)fromAppQueue.anyPtr)[USERDATALENPOS]+3] & 0x03;
+			  //currentStatus = fromAppQueue.sapi;
 				if(currentStatus  == 0x03){//Sapi is good (read=1), and CRC is Ok
 					fromAppQueue.type=TO_PHY;
 					
@@ -210,6 +216,8 @@ void MacSender(void *argument){
 			default:
 				break;
 		}
+		} else {
+			CheckRetCode(nextMacSElem,__LINE__,__FILE__,CONTINUE);
 		}
 	}
 }

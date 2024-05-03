@@ -393,7 +393,7 @@ int main(void)
 	queue_lcd_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_lcd_attr);
 	queue_keyboard_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_keyboard_attr);
 	queue_usartR_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_usartR_attr);
-	queue_macWaitToken_id = osMessageQueueNew(4,sizeof(struct queueMsg_t),&queue_macWaitToken_attr);
+	queue_macWaitToken_id = osMessageQueueNew(3,sizeof(struct queueMsg_t),&queue_macWaitToken_attr);
 
 	//------------------------------------------------------------------------------
 	// Create Threads

@@ -128,6 +128,7 @@ void MacReceiver(void *argument){
 					fromQueueMacR.sapi = srcAddr.myAddr.sapi;//(*myCharPtr) & 0x07;
 					osMessageQueuePut(queue_macS_id, &fromQueueMacR, osPriorityNormal, osWaitForever);
 				}
-		}
+		} else {
+			CheckRetCode(nextPhyRElem ,__LINE__,__FILE__,CONTINUE);}
 	}
 }
